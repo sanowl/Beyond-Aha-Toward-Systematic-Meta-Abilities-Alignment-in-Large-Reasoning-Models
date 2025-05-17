@@ -21,6 +21,7 @@ from transformers import (
 from datasets import Dataset, load_dataset
 from trl import PPOTrainer, PPOConfig, AutoModelForCausalLMWithValueHead
 from peft import LoraConfig, PeftModel
+from security import safe_command
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_DIR = "pipeline_checkpoints_advanced"
@@ -324,7 +325,7 @@ def merge_models_with_mergekit(
         ]
         print(f"  Executing mergekit command: {' '.join(command)}")
         
-        process = subprocess.run(command, capture_output=True, text=True, check=True)
+        process = safe_command.run(subprocess.run, command, capture_output=True, text=True, check=True)
         print("  mergekit stdout:")
         print(process.stdout)
         if process.stderr:

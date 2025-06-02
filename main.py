@@ -4,7 +4,6 @@ import math
 from collections import OrderedDict
 from typing import Dict, Any, Type, List, Tuple, Optional
 import os
-import random
 import re
 import argparse
 import json
@@ -21,6 +20,7 @@ from transformers import (
 from datasets import Dataset, load_dataset
 from trl import PPOTrainer, PPOConfig, AutoModelForCausalLMWithValueHead
 from peft import LoraConfig, PeftModel
+import secrets
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_DIR = "pipeline_checkpoints_advanced"
@@ -39,11 +39,11 @@ class DeductionTaskGenerator:
         self.vars = self.VARS[:num_vars]
 
     def _random_literal(self) -> str:
-        v = random.choice(self.vars)
-        return v if random.random() < 0.5 else f"¬{v}" 
+        v = secrets.choice(self.vars)
+        return v if secrets.SystemRandom().random() < 0.5 else f"¬{v}" 
 
     def _random_clause(self) -> str:
-        k = random.randint(2, max(2, self.num_vars -1)) 
+        k = secrets.SystemRandom().randint(2, max(2, self.num_vars -1)) 
         lits = " ∨ ".join(sorted(list(set(self._random_literal() for _ in range(k))))) 
         return f"({lits})"
 
@@ -60,11 +60,11 @@ class DeductionTaskGenerator:
 
 class InductionTaskGenerator:
     def sample(self) -> Dict[str, str]:
-        start = random.randint(1, 10)
-        diff = random.randint(1, 5) * random.choice([-1, 1])
+        start = secrets.SystemRandom().randint(1, 10)
+        diff = secrets.SystemRandom().randint(1, 5) * secrets.choice([-1, 1])
         length = 5
         seq = [start + i * diff for i in range(length)]
-        mask_idx = random.randint(0, length - 1)
+        mask_idx = secrets.SystemRandom().randint(0, length - 1)
         gt_answer = str(seq[mask_idx])
         seq_str_parts = ["__" if i == mask_idx else str(val) for i, val in enumerate(seq)]
         prompt_text = (
@@ -77,11 +77,11 @@ class InductionTaskGenerator:
 
 class AbductionTaskGenerator:
     def sample(self) -> Dict[str, str]:
-        target = random.randint(5, 20)
-        a = random.randint(1, target - 1)
+        target = secrets.SystemRandom().randint(5, 20)
+        a = secrets.SystemRandom().randint(1, target - 1)
         b = target - a 
         while b <= 0 or b == a : 
-            a = random.randint(1, target - 1)
+            a = secrets.SystemRandom().randint(1, target - 1)
             b = target - a
             if target <=2: a,b = 1,1; break
         prompt_text = (
@@ -389,8 +389,8 @@ class DomainPPOTrainer(MetaAbilityPPOTrainer):
         if self.domain_dataset_name == "dummy_math":
             data = []
             for _ in range(self.num_samples_total):
-                n1, n2 = random.randint(0,100), random.randint(0,100)
-                op_choice = random.choice(['+', '-', '*'])
+                n1, n2 = secrets.SystemRandom().randint(0,100), secrets.SystemRandom().randint(0,100)
+                op_choice = secrets.choice(['+', '-', '*'])
                 if op_choice == '+': query, answer = f"What is {n1} + {n2}?", str(n1+n2)
                 elif op_choice == '-': query, answer = f"What is {n1} - {n2}?", str(n1-n2)
                 else: query, answer = f"What is {n1} * {n2}?", str(n1*n2)
@@ -505,14 +505,14 @@ def evaluate_pass_at_1(
     eval_data = []
     if eval_dataset_name == "dummy_eval_math":
         for i in range(num_eval_samples):
-            n1, n2 = random.randint(0, 20), random.randint(0, 20)
+            n1, n2 = secrets.SystemRandom().randint(0, 20), secrets.SystemRandom().randint(0, 20)
             query = f"<task_type>[Math]</task_type>\n<problem>Calculate {n1} * {n2}.</problem>\n<思考>"
             gt = str(n1 * n2)
             eval_data.append({"query": query, "ground_truth_answer": gt})
     else:
         print(f"  Warning: Unknown evaluation dataset '{eval_dataset_name}'. Using dummy math.")
         for i in range(num_eval_samples):
-            n1, n2 = random.randint(0, 20), random.randint(0, 20)
+            n1, n2 = secrets.SystemRandom().randint(0, 20), secrets.SystemRandom().randint(0, 20)
             query = f"<task_type>[Math]</task_type>\n<problem>Calculate {n1} * {n2}.</problem>\n<思考>"
             gt = str(n1 * n2)
             eval_data.append({"query": query, "ground_truth_answer": gt})
